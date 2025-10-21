@@ -29,10 +29,15 @@ float basketHeight = 20;
 float basketSpeed = 8.0f;
 
 // Chicken variables
-float chickenX = WINDOW_WIDTH / 2;
-float chickenY = WINDOW_HEIGHT - 80;
-float chickenSpeed = 4.0f;
-int chickenDirection = 1;
+struct Chicken {
+    float x, y;
+    float speed;
+    int direction;
+};
+
+const int NUM_CHICKENS = 1;
+Chicken chickens[NUM_CHICKENS];
+
 float eggSpawnTimer = 0;
 float eggSpawnInterval = 1.0f;
 
@@ -49,6 +54,7 @@ struct FallingItem {
 };
 
 std::vector<FallingItem> items;
+
 
 // Forward declarations
 void drawText(float x, float y, const char* text, void* font = GLUT_BITMAP_HELVETICA_18);
@@ -98,38 +104,40 @@ void drawBasket() {
 }
 
 // Draw chicken
-void drawChicken() {
+void drawChicken(float x, float y) {
     // Body
     glColor3f(1.0f, 1.0f, 1.0f);
-    drawCircle(chickenX, chickenY, 15);
+    drawCircle(x, y, 15);
 
     // Head
     glColor3f(1.0f, 0.9f, 0.8f);
-    drawCircle(chickenX + 10, chickenY + 10, 10);
+    drawCircle(x + 10, y + 10, 10);
 
     // Beak
     glColor3f(1.0f, 0.8f, 0.0f);
     glBegin(GL_TRIANGLES);
-    glVertex2f(chickenX + 18, chickenY + 10);
-    glVertex2f(chickenX + 25, chickenY + 8);
-    glVertex2f(chickenX + 18, chickenY + 6);
+    glVertex2f(x + 18, y + 10);
+    glVertex2f(x + 25, y + 8);
+    glVertex2f(x + 18, y + 6);
     glEnd();
 
     // Eye
     glColor3f(0.0f, 0.0f, 0.0f);
-    drawCircle(chickenX + 13, chickenY + 12, 2);
+    drawCircle(x + 13, y + 12, 2);
 
     // Comb
     glColor3f(1.0f, 0.0f, 0.0f);
     glBegin(GL_TRIANGLES);
-    glVertex2f(chickenX + 8, chickenY + 18);
-    glVertex2f(chickenX + 12, chickenY + 25);
-    glVertex2f(chickenX + 16, chickenY + 18);
+    glVertex2f(x + 8, y + 18);
+    glVertex2f(x + 12, y + 25);
+    glVertex2f(x + 16, y + 18);
     glEnd();
 }
 
 // Draw bamboo stick
 void drawBambooStick() {
+    float chickenY = WINDOW_HEIGHT - 80;
+
     glColor3f(0.4f, 0.6f, 0.3f);
     glLineWidth(8);
     glBegin(GL_LINES);
@@ -287,9 +295,12 @@ void drawHUD() {
 
 // Spawn item
 void spawnItem() {
+    // Random chicken থেকে egg spawn হবে
+    int randomChicken = rand() % NUM_CHICKENS;
+
     FallingItem item;
-    item.x = chickenX;
-    item.y = chickenY - 20;
+    item.x = chickens[randomChicken].x;
+    item.y = chickens[randomChicken].y - 20;
     item.active = true;
 
     int random = rand() % 100;
@@ -344,10 +355,12 @@ void update(int value) {
             }
         }
 
-        // Update chicken position
-        chickenX += chickenSpeed * chickenDirection;
-        if (chickenX <= 70 || chickenX >= WINDOW_WIDTH - 70) {
-            chickenDirection *= -1;
+        // Update all chickens position
+        for (int i = 0; i < NUM_CHICKENS; i++) {
+            chickens[i].x += chickens[i].speed * chickens[i].direction;
+            if (chickens[i].x <= 70 || chickens[i].x >= WINDOW_WIDTH - 70) {
+                chickens[i].direction *= -1;
+            }
         }
 
         // Spawn eggs/items
@@ -415,7 +428,12 @@ void display() {
     } else if (currentState == PLAYING || currentState == PAUSED) {
         // Draw game elements
         drawBambooStick();
-        drawChicken();
+
+        // Draw all 3 chickens
+        for (int i = 0; i < NUM_CHICKENS; i++) {
+            drawChicken(chickens[i].x, chickens[i].y);
+        }
+
         drawBasket();
 
         // Draw items
@@ -527,11 +545,17 @@ void resetGame() {
     items.clear();
     basketX = WINDOW_WIDTH / 2;
     basketWidth = 80;
-    chickenX = WINDOW_WIDTH / 2;
-    chickenDirection = 1;
     eggSpawnTimer = 0;
     largeBasketTimer = 0;
     slowMotionTimer = 0;
+
+    // Initialize 3 chickens at different positions
+    for (int i = 0; i < NUM_CHICKENS; i++) {
+        chickens[i].x = (WINDOW_WIDTH / 4) * (i + 1); // Space them evenly
+        chickens[i].y = WINDOW_HEIGHT - 80;
+        chickens[i].speed = 3.0f + (rand() % 20) / 10.0f; // Random speed 3-5
+        chickens[i].direction = (i % 2 == 0) ? 1 : -1; // Alternate directions
+    }
 }
 
 // Initialize OpenGL
@@ -543,6 +567,14 @@ void init() {
     glMatrixMode(GL_MODELVIEW);
 
     srand(time(NULL));
+
+    // Initialize chickens for the first time
+    for (int i = 0; i < NUM_CHICKENS; i++) {
+        chickens[i].x = (WINDOW_WIDTH / 4) * (i + 1);
+        chickens[i].y = WINDOW_HEIGHT - 80;
+        chickens[i].speed = 3.0f + (rand() % 20) / 10.0f;
+        chickens[i].direction = (i % 2 == 0) ? 1 : -1;
+    }
 }
 
 // Main function
@@ -551,7 +583,7 @@ int main(int argc, char** argv) {
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutInitWindowPosition(100, 100);
-    glutCreateWindow("Catch The Eggs");
+    glutCreateWindow("Catch The Eggs - 3 Chickens");
 
     init();
 
